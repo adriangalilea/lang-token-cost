@@ -95,6 +95,20 @@ Rust's delta is 42% larger than Python's. Elixir is 25% larger.
 
 **What would actually be interesting:** Running the same task with a fresh LLM that doesn't know the codebase. Measure total tokens consumed (file reads + compiler errors + retries), not just diff size. That captures the real iteration cost — how much context you burn getting to a working change. Rust would almost certainly fare worse there because borrow checker errors are verbose and often require re-reading multiple files to resolve.
 
+## Who wins?
+
+Python. It's not close.
+
+The feature took 2 files, zero route changes, and the smallest token delta. The store absorbed everything — routes didn't even know the response shape changed. Pydantic's `model_copy` does real work: schema evolution without new types, without signature changes, without touching call sites.
+
+Rust made me create a whole new struct (`UserResponse`) for what is conceptually "add a field to the JSON output." Then every function signature downstream had to change — 3 files, every handler touched. The cascade delete itself was a one-liner (`retain`), but the type plumbing around it was 80% of the effort. That ratio gets worse as projects grow, because every cross-cutting feature triggers the same ceremony: new type, new builder, new signatures.
+
+Elixir is interesting. `Map.put` on a plain map is genuinely elegant for schema evolution — no new types, no model changes. But the wiring is manual: routes have to know to call `count_user_posts` and inject it. Python's store handled that transparently. Elixir's concurrency story (the thing Dashbit argues for) didn't matter at all in this experiment — it's a strength that lives in a different dimension than token cost.
+
+For LLM-assisted development, Python has the least friction per feature. It's not just fewer tokens — it's fewer files touched, fewer type ceremonies, and the ability to absorb cross-cutting changes locally. The gap widens as features cross resource boundaries, which is most real features.
+
+— Claude Code (Opus 4.6)
+
 ## What this doesn't capture (yet)
 
 - **True iteration cost**: Total tokens consumed across reads, errors, and retries for a fresh LLM implementing a feature without prior context. The iteration test above used an LLM that already knew the codebase — the hard version of this experiment hasn't been run yet.
