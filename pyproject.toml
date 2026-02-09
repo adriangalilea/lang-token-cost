@@ -1,5 +1,5 @@
 [project]
-name = "rust-vs-python"
+name = "lang-token-cost"
 version = "0.1.0"
 description = "Token cost comparison: why higher-level languages win for LLM-assisted coding"
 readme = "README.md"

@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 
 import tiktoken
@@ -8,13 +7,30 @@ ENCODING = tiktoken.get_encoding("cl100k_base")
 
 BENCHMARKS = ["todo_cli", "rest_api"]
 
-RUST_EXTS = {".rs", ".toml"}
-PYTHON_EXTS = {".py", ".toml"}
+LANGUAGES = {
+    "Python": {
+        "dir": "python",
+        "exts": {".py", ".toml"},
+    },
+    "Rust": {
+        "dir": "rust",
+        "exts": {".rs", ".toml"},
+    },
+    "Elixir": {
+        "dir": "elixir",
+        "exts": {".ex", ".exs"},
+    },
+}
+
+
+SKIP_DIRS = {"deps", "target", "_build", "__pycache__", ".elixir_ls"}
 
 
 def count_tokens(directory: Path, extensions: set[str]) -> dict[str, int]:
     per_file: dict[str, int] = {}
     for f in sorted(directory.rglob("*")):
+        if any(part in SKIP_DIRS for part in f.relative_to(directory).parts):
+            continue
         if f.is_file() and f.suffix in extensions:
             text = f.read_text()
             tokens = len(ENCODING.encode(text))
@@ -24,50 +40,45 @@ def count_tokens(directory: Path, extensions: set[str]) -> dict[str, int]:
 
 def main() -> None:
     root = Path(__file__).parent
-    rust_dir = root / "rust"
-    python_dir = root / "python"
 
     rows = []
-    all_pass = True
+    totals: dict[str, int] = {lang: 0 for lang in LANGUAGES}
 
     for bench in BENCHMARKS:
-        py_tokens = count_tokens(python_dir / bench, PYTHON_EXTS)
-        rs_tokens = count_tokens(rust_dir / bench, RUST_EXTS)
+        counts = {}
+        for lang, cfg in LANGUAGES.items():
+            tokens = count_tokens(root / cfg["dir"] / bench, cfg["exts"])
+            total = sum(tokens.values())
+            assert total > 0, f"{lang}/{bench} has 0 tokens — missing implementation?"
+            counts[lang] = total
+            totals[lang] += total
 
-        py_total = sum(py_tokens.values())
-        rs_total = sum(rs_tokens.values())
-        ratio = rs_total / py_total if py_total > 0 else float("inf")
+        py = counts["Python"]
+        row = [bench]
+        for lang in LANGUAGES:
+            row.append(counts[lang])
+        row.append(f"{counts['Rust'] / py:.1f}x")
+        row.append(f"{counts['Elixir'] / py:.1f}x")
+        rows.append(row)
 
-        rows.append([bench, py_total, rs_total, f"{ratio:.1f}x", rs_total - py_total])
-
-        if rs_total <= py_total:
-            all_pass = False
+    headers = ["Benchmark"] + [f"{lang} tokens" for lang in LANGUAGES] + ["Rust/Py", "Elixir/Py"]
 
     print()
-    print(tabulate(
-        rows,
-        headers=["Benchmark", "Python tokens", "Rust tokens", "Ratio", "Delta"],
-        tablefmt="github",
-    ))
+    print(tabulate(rows, headers=headers, tablefmt="github"))
     print()
 
-    py_grand = sum(r[1] for r in rows)
-    rs_grand = sum(r[2] for r in rows)
-    grand_ratio = rs_grand / py_grand if py_grand > 0 else float("inf")
-    print(f"Total: Python {py_grand} | Rust {rs_grand} | {grand_ratio:.1f}x overhead")
+    parts = " | ".join(f"{lang} {totals[lang]}" for lang in LANGUAGES)
+    grand_ratio_rust = totals["Rust"] / totals["Python"]
+    grand_ratio_elixir = totals["Elixir"] / totals["Python"]
+    print(f"Total: {parts} | Rust {grand_ratio_rust:.1f}x | Elixir {grand_ratio_elixir:.1f}x")
     print()
 
     for bench in BENCHMARKS:
-        print(f"--- {bench} (python) ---")
-        for f, t in count_tokens(python_dir / bench, PYTHON_EXTS).items():
-            print(f"  {f}: {t} tokens")
-        print(f"--- {bench} (rust) ---")
-        for f, t in count_tokens(rust_dir / bench, RUST_EXTS).items():
-            print(f"  {f}: {t} tokens")
+        for lang, cfg in LANGUAGES.items():
+            print(f"--- {bench} ({lang.lower()}) ---")
+            for f, t in count_tokens(root / cfg["dir"] / bench, cfg["exts"]).items():
+                print(f"  {f}: {t} tokens")
         print()
-
-    assert all_pass, "THESIS FAILED: Rust did not exceed Python token count in all benchmarks"
-    print("THESIS HOLDS: Rust requires more tokens than Python in every benchmark.")
 
 
 if __name__ == "__main__":
