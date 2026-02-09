@@ -49,6 +49,17 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct UserResponse {
+    pub id: u64,
+    pub name: String,
+    pub email: String,
+    pub role: Role,
+    pub post_count: usize,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct PostCreate {
     pub title: String,

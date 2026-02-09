@@ -9,7 +9,7 @@ use crate::store::SharedState;
 pub async fn list_users(
     State(state): State<SharedState>,
     Query(params): Query<UserListParams>,
-) -> Result<Json<PaginatedResponse<User>>, AppError> {
+) -> Result<Json<PaginatedResponse<UserResponse>>, AppError> {
     let store = state.lock().unwrap();
     Ok(Json(store.list_users(&params)))
 }
@@ -17,7 +17,7 @@ pub async fn list_users(
 pub async fn create_user(
     State(state): State<SharedState>,
     Json(body): Json<UserCreate>,
-) -> Result<(StatusCode, Json<User>), AppError> {
+) -> Result<(StatusCode, Json<UserResponse>), AppError> {
     let mut store = state.lock().unwrap();
     let user = store.create_user(body);
     Ok((StatusCode::CREATED, Json(user)))
@@ -26,17 +26,17 @@ pub async fn create_user(
 pub async fn get_user(
     State(state): State<SharedState>,
     Path(user_id): Path<u64>,
-) -> Result<Json<User>, AppError> {
+) -> Result<Json<UserResponse>, AppError> {
     let store = state.lock().unwrap();
     let user = store.get_user(user_id)?;
-    Ok(Json(user.clone()))
+    Ok(Json(user))
 }
 
 pub async fn update_user(
     State(state): State<SharedState>,
     Path(user_id): Path<u64>,
     Json(body): Json<UserUpdate>,
-) -> Result<Json<User>, AppError> {
+) -> Result<Json<UserResponse>, AppError> {
     let mut store = state.lock().unwrap();
     let user = store.update_user(user_id, body)?;
     Ok(Json(user))

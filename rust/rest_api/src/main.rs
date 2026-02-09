@@ -4,7 +4,7 @@ mod routes_posts;
 mod routes_users;
 mod store;
 
-use axum::routing::{delete, get, patch, post};
+use axum::routing::get;
 use axum::{Json, Router};
 use std::sync::{Arc, Mutex};
 use tower_http::cors::{Any, CorsLayer};
@@ -24,7 +24,10 @@ async fn main() {
         .allow_headers(Any);
 
     let user_routes = Router::new()
-        .route("/", get(routes_users::list_users).post(routes_users::create_user))
+        .route(
+            "/",
+            get(routes_users::list_users).post(routes_users::create_user),
+        )
         .route(
             "/{user_id}",
             get(routes_users::get_user)
@@ -33,7 +36,10 @@ async fn main() {
         );
 
     let post_routes = Router::new()
-        .route("/", get(routes_posts::list_posts).post(routes_posts::create_post))
+        .route(
+            "/",
+            get(routes_posts::list_posts).post(routes_posts::create_post),
+        )
         .route(
             "/{post_id}",
             get(routes_posts::get_post)
@@ -49,9 +55,7 @@ async fn main() {
         .layer(cors)
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }

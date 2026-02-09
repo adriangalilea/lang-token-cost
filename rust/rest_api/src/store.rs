@@ -24,7 +24,26 @@ impl Store {
         }
     }
 
-    pub fn create_user(&mut self, data: UserCreate) -> User {
+    fn count_user_posts(&self, user_id: u64) -> usize {
+        self.posts
+            .values()
+            .filter(|p| p.author_id == user_id)
+            .count()
+    }
+
+    fn user_to_response(&self, user: &User) -> UserResponse {
+        UserResponse {
+            id: user.id,
+            name: user.name.clone(),
+            email: user.email.clone(),
+            role: user.role,
+            post_count: self.count_user_posts(user.id),
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+        }
+    }
+
+    pub fn create_user(&mut self, data: UserCreate) -> UserResponse {
         let now = Utc::now();
         let id = self.next_user_id;
         self.next_user_id += 1;
@@ -36,17 +55,18 @@ impl Store {
             created_at: now,
             updated_at: now,
         };
-        self.users.insert(id, user.clone());
-        user
+        self.users.insert(id, user);
+        self.user_to_response(self.users.get(&id).unwrap())
     }
 
-    pub fn get_user(&self, id: u64) -> Result<&User, AppError> {
+    pub fn get_user(&self, id: u64) -> Result<UserResponse, AppError> {
         self.users
             .get(&id)
+            .map(|u| self.user_to_response(u))
             .ok_or_else(|| AppError::NotFound(format!("User {id} not found")))
     }
 
-    pub fn list_users(&self, params: &UserListParams) -> PaginatedResponse<User> {
+    pub fn list_users(&self, params: &UserListParams) -> PaginatedResponse<UserResponse> {
         let mut items: Vec<&User> = self.users.values().collect();
 
         if let Some(ref search) = params.search {
@@ -60,11 +80,11 @@ impl Store {
         let page = params.pagination.page;
         let per_page = params.pagination.per_page;
         let start = ((page - 1) * per_page) as usize;
-        let paged: Vec<User> = items
+        let paged: Vec<UserResponse> = items
             .into_iter()
             .skip(start)
             .take(per_page as usize)
-            .cloned()
+            .map(|u| self.user_to_response(u))
             .collect();
         let pages = (total as u64 + per_page - 1) / per_page;
 
@@ -77,7 +97,7 @@ impl Store {
         }
     }
 
-    pub fn update_user(&mut self, id: u64, data: UserUpdate) -> Result<User, AppError> {
+    pub fn update_user(&mut self, id: u64, data: UserUpdate) -> Result<UserResponse, AppError> {
         let user = self
             .users
             .get_mut(&id)
@@ -94,14 +114,16 @@ impl Store {
         }
         user.updated_at = Utc::now();
 
-        Ok(user.clone())
+        let id = user.id;
+        Ok(self.user_to_response(self.users.get(&id).unwrap()))
     }
 
     pub fn delete_user(&mut self, id: u64) -> Result<(), AppError> {
         self.users
             .remove(&id)
-            .map(|_| ())
-            .ok_or_else(|| AppError::NotFound(format!("User {id} not found")))
+            .ok_or_else(|| AppError::NotFound(format!("User {id} not found")))?;
+        self.posts.retain(|_, p| p.author_id != id);
+        Ok(())
     }
 
     pub fn create_post(&mut self, author_id: u64, data: PostCreate) -> Result<Post, AppError> {

@@ -7,7 +7,14 @@ defmodule RestApi.Models do
     defstruct [:id, :name, :email, :role, :created_at, :updated_at]
 
     def to_json(%__MODULE__{} = u) do
-      %{id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, updated_at: u.updated_at}
+      %{
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        created_at: u.created_at,
+        updated_at: u.updated_at
+      }
     end
   end
 
@@ -15,7 +22,15 @@ defmodule RestApi.Models do
     defstruct [:id, :author_id, :title, :body, :published, :created_at, :updated_at]
 
     def to_json(%__MODULE__{} = p) do
-      %{id: p.id, author_id: p.author_id, title: p.title, body: p.body, published: p.published, created_at: p.created_at, updated_at: p.updated_at}
+      %{
+        id: p.id,
+        author_id: p.author_id,
+        title: p.title,
+        body: p.body,
+        published: p.published,
+        created_at: p.created_at,
+        updated_at: p.updated_at
+      }
     end
   end
 

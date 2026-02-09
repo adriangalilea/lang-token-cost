@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class Role(StrEnum):
@@ -27,6 +27,7 @@ class User(BaseModel):
     name: str
     email: str
     role: Role
+    post_count: int = 0
     created_at: datetime
     updated_at: datetime
 

@@ -2,8 +2,8 @@ defmodule RestApi.RoutesPosts do
   use Plug.Router
   alias RestApi.{Models.Post, Store, Router}
 
-  plug :match
-  plug :dispatch
+  plug(:match)
+  plug(:dispatch)
 
   get "/" do
     conn = fetch_query_params(conn)

@@ -11,9 +11,6 @@ pub enum AppError {
 
     #[error("Bad request: {0}")]
     BadRequest(String),
-
-    #[error("Internal error: {0}")]
-    Internal(String),
 }
 
 #[derive(Serialize)]
@@ -26,7 +23,6 @@ impl IntoResponse for AppError {
         let (status, message) = match &self {
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg.clone()),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
-            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
         };
         (status, Json(ErrorBody { detail: message })).into_response()
     }

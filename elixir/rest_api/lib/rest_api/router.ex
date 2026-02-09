@@ -1,13 +1,13 @@
 defmodule RestApi.Router do
   use Plug.Router
 
-  plug RestApi.Middleware
-  plug Plug.Parsers, parsers: [:json], json_decoder: Jason
-  plug :match
-  plug :dispatch
+  plug(RestApi.Middleware)
+  plug(Plug.Parsers, parsers: [:json], json_decoder: Jason)
+  plug(:match)
+  plug(:dispatch)
 
-  forward "/api/v1/users", to: RestApi.RoutesUsers
-  forward "/api/v1/posts", to: RestApi.RoutesPosts
+  forward("/api/v1/users", to: RestApi.RoutesUsers)
+  forward("/api/v1/posts", to: RestApi.RoutesPosts)
 
   get "/health" do
     send_json(conn, 200, %{status: "ok"})
